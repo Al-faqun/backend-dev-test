@@ -1,16 +1,30 @@
 <?php
 namespace Serializing;
 
-
+/**
+ * Class UserMapper
+ * @package Serializing
+ */
 class UserMapper
 {
 	private $pdo;
 	
+	/**
+	 * UserMapper constructor.
+	 * @param \PDO $pdo
+	 */
 	function __construct(\PDO $pdo)
 	{
 		$this->pdo = $pdo;
 	}
 	
+	/**
+	 * Добавить в таблицу новую строку о юзере.
+	 *
+	 * @param $storage
+	 * @return bool|int
+	 * @throws \Exception
+	 */
 	function newUserRecord($storage)
 	{
 		try {
@@ -27,6 +41,8 @@ class UserMapper
 	}
 	
 	/**
+	 * Вернуть последний результат INSERT.
+	 *
 	 * @return int
 	 */
 	function lastInsertedId()
@@ -34,6 +50,13 @@ class UserMapper
 		return (int)$this->pdo->lastInsertId();
 	}
 	
+	/**
+	 * Получить переменную storage из бд по айди пользователя.
+	 *
+	 * @param int $id
+	 * @return bool
+	 * @throws \Exception
+	 */
 	function fetchStorage($id)
 	{
 		try {
@@ -52,6 +75,14 @@ class UserMapper
 		return $result;
 	}
 	
+	/**
+	 * Заменить переменную storage существующего пользователя.
+	 * 
+	 * @param int $id
+	 * @param $storage
+	 * @return bool
+	 * @throws \Exception
+	 */
 	function replaceStorage($id, $storage)
 	{
 		try {
