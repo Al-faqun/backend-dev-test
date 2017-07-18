@@ -1,0 +1,12 @@
+{
+    "require": {
+        "phpunit/phpunit": "6.3.x-dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "FileSystem\\": "FileSystem/",
+            "Articles\\": "Articles/",
+            "Serializing\\": "Serializing/"
+        }
+    }
+}
