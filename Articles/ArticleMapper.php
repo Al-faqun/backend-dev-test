@@ -1,18 +1,27 @@
 <?php
 namespace Articles;
 
-
+/**
+ * Class ArticleMapper
+ * @package Articles
+ */
 class ArticleMapper
 {
 	private $pdo;
 	
+	/**
+	 * ArticleMapper constructor.
+	 * @param \PDO $pdo
+	 */
 	function __construct(\PDO $pdo)
 	{
 		$this->pdo = $pdo;
 	}
 	
 	/**
-	 * @param $id
+	 * Получить массив с данными статьи по айди.
+	 *
+	 * @param int $id
 	 * @return array|false
 	 */
 	function getArticle($id)
@@ -25,13 +34,17 @@ class ArticleMapper
 	}
 	
 	/**
-	 *@return array|false
+	 * Получить массив с данными о детях-статьях, принадлежащих указанной секции.
+	 *
+	 * @param int $sectionID
+	 * @return array|false
 	 */
 	function getArticleChildList($sectionID)
 	{
 		$query = 'SELECT `id`, `name`, `text_filepath`, `parent_id` FROM `articles` WHERE `parent_id` = :id';
 		$stmt = $this->pdo->prepare($query);
 		$stmt->execute(['id' => $sectionID]);
+		//получаем ассоциативный массив
 		$data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 		if (empty($data)) {
 			$data = false;
@@ -40,31 +53,42 @@ class ArticleMapper
 	}
 	
 	/**
+	 * Получить класс Секции и рекурсивно всех её потмков.
+	 *
 	 * @param $sectionID
+	 * @param SectionMapper $sectionMapper
 	 * @return Section|bool
 	 */
 	function fetchFromSection($sectionID, SectionMapper $sectionMapper)
 	{
-		$fetchChildRecursive = function($child) use (&$fetchChildRecursive, $sectionMapper) {
-			$child = $sectionMapper->toSection($child);
-			$articles = $this->getArticleChildList($child->ID);
+		//рекурсивно получаем всех потомков выбранной Секции
+		$fetchChildRecursive = function($parent) use (&$fetchChildRecursive, $sectionMapper) {
+			//превращаем массив в класс Section
+			$parent = $sectionMapper->toSection($parent);
+			//получаем список детей-статей
+			$articles = $this->getArticleChildList($parent->ID);
 			if ($articles !== false) {
 				foreach ($articles as $article) {
-					$child->addChild($this->toArticle($article));
+					//каждую статью добавляем в список детей
+					$parent->addChild($this->toArticle($article));
 				}
 			}
-			$sections = $sectionMapper->getSectionChildList($child->ID);
+			//получаем список детей-секций
+			$sections = $sectionMapper->getSectionChildList($parent->ID);
 			if ($sections !== false) {
 				foreach ($sections as $section) {
-					$child->addChild($fetchChildRecursive($section));
+					//каждую секцию (и всех её детей) добавляем рекурсивно как ребенка
+					$parent->addChild($fetchChildRecursive($section));
 				}
 			}
-			return $child;
+			return $parent;
 		};
 		
 		try {
+			//получаем массив с данными родительской секции
 			$root = $sectionMapper->getSection($sectionID);
 			if ($root !== false) {
+				//получаем класс Section со всеми потомками
 				$result = $fetchChildRecursive($root);
 			} else {
 				$result = false;
@@ -77,6 +101,9 @@ class ArticleMapper
 	}
 	
 	/**
+	 * Добавляем статью в базу данных
+	 * (обратите внимание, айди в объекте значения не имеет).
+	 *
 	 * @param Article $article
 	 * @return bool
 	 * @throws \Exception
@@ -134,6 +161,8 @@ class ArticleMapper
 	}
 	
 	/**
+	 * Преобразовать массив с данными в класс Article.
+	 *
 	 * @param $row
 	 * @return Article
 	 */
@@ -143,6 +172,14 @@ class ArticleMapper
 		return $result;
 	}
 	
+	/**
+	 * Получить pdoStatement для сущности.
+	 *
+	 * @param Article $object
+	 * @param string $typeOfStatement
+	 * @return \PDOStatement
+	 * @throws \Exception
+	 */
 	private function toStatement(Article $object, $typeOfStatement = 'insert')
 	{
 		try {

@@ -1,20 +1,31 @@
 <?php
 namespace FileSystem;
 
+/**
+ * Class FileMapper
+ * @package FileSystem
+ */
 class FileMapper
 {
 	private $pdo;
 	private $requiredFields;
-
+	
+	/**
+	 * FileMapper constructor.
+	 * @param \PDO $pdo
+	 */
 	function __construct(\PDO $pdo)
 	{
 		$this->pdo = $pdo;
 		$this->requiredFields = array('id', 'name', 'type');
 	}
-
+	
 	/**
-	*@return array|false
-	*/
+	 * Получить ноду (файл/папку) по айди.
+	 *
+	 * @param int $id
+	 * @return array|false
+	 */
 	function getNode($id)
 	{
 		$query = 'SELECT `id`, `name`, `type`, `parent_id` FROM `files` WHERE `id` = :id LIMIT 1';
@@ -23,10 +34,13 @@ class FileMapper
 		$node = $stmt->fetch(\PDO::FETCH_ASSOC);
 		return $node;
 	}
-
+	
 	/**
-	*@return array|false
-	*/
+	 * Получить список детей ноды по айди.
+	 *
+	 * @param int $id
+	 * @return array|false
+	 */
 	function getChildList($id)
 	{
 		$query = 'SELECT `id`, `name`, `type`, `parent_id` FROM `files` WHERE `parent_id` = :id';
@@ -38,10 +52,13 @@ class FileMapper
 		}
 		return $data;
 	}
-
+	
 	/**
-	*@return File|Folder|false
-	*/
+	 * Получить папку, и список всех её детей рекурсивно.
+	 *
+	 * @param int $id
+	 * @return File|Folder|false
+	 */
 	function fetchFromNode($id)
 	{
 		try { 
@@ -78,7 +95,8 @@ class FileMapper
 	}
 	
 	/**
-	 * Object's ID is ignored and auto-generated.
+	 * Добавить файл/папку (айди объекта игнорируется).
+	 *
 	 * @param FilesEntity $child
 	 * @return bool
 	 * @throws \Exception
@@ -96,8 +114,9 @@ class FileMapper
 	}
 
 	/**
+	 * Имеет смысл использовать только следующим же выражением после insert.
+	 *
 	* @return int id of last inserted ID or 0 if cannot retrieve
-	 * Only has a meaning if used [u]directly[/u] after the insert statement.
 	*/
 	public function lastInsertedId()
 	{
@@ -105,7 +124,10 @@ class FileMapper
 	}
 	
 	/**
-	 *@return bool
+	 * Обновить данные ноды (файла/папки)
+	 * @param FilesEntity $child
+	 * @return bool
+	 * @throws \Exception
 	 */
 	function updateNode(FilesEntity $child)
 	{
@@ -119,7 +141,11 @@ class FileMapper
 	}
 	
 	/**
-	 *@return bool
+	 * Удалить ноду.
+	 * Внимание, её дети не удаляются! Если хотите, удалите отдельно.
+	 * @param int $id
+	 * @return bool
+	 * @throws \Exception
 	 */
 	function deleteNode($id)
 	{
@@ -133,9 +159,17 @@ class FileMapper
 		return $result;
 	}
 	
+	/**
+	 * Удалить каждого ребёнка папки
+	 * (внимание, сама папка не удаляется!).
+	 * @param $id
+	 * @return bool
+	 */
 	function deleteEveryChild($id)
 	{
+		//функция, которая рекурсивно удаляет всех детей ноды и её саму
 		$deleteChildRecursive = function($child) use (&$deleteChildRecursive) {
+			//если типа - папка, получаем и удаляем список всех её детей
 			if ($child['type'] === 'folder') {
 				$children = $this->getChildList($child['id']);
 				if (!empty($children)) {
@@ -144,15 +178,21 @@ class FileMapper
 					}
 				}
 			}
+			//затем удаляем саму ноду
 			$result = $this->deleteNode($child['id']);
+			//если все предыдущие sql-операции выполнены успешно, возвращаем true,
+			//иначе - false
 			if (isset($returned)) {
 				$result = ($returned  === true) ? $result : false;
 			}
 			return $result;
 		};
+		
 		$result = true;
+		//получаем список детей
 		$children = $this->getChildList($id);
 		if ($children !== false) {
+			//рекурсивно удаляем каждого потомка, саму ноду не трогаем
 			foreach ($children as $child) {
 				$result = $deleteChildRecursive($child);
 			}
@@ -160,6 +200,10 @@ class FileMapper
 		return $result;
 	}
 	
+	/**
+	 * @param $row
+	 * @return bool|File|Folder
+	 */
 	private function toObject($row)
 	{
 		if ($this->checkIntegrity($row) === true) {

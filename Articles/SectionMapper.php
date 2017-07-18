@@ -1,18 +1,26 @@
 <?php
 namespace Articles;
 
-
+/**
+ * Class SectionMapper
+ * @package Articles
+ */
 class SectionMapper
 {
 	private $pdo;
 	
+	/**
+	 * SectionMapper constructor.
+	 * @param \PDO $pdo
+	 */
 	function __construct(\PDO $pdo)
 	{
 		$this->pdo = $pdo;
 	}
 	
 	/**
-	 * @param $id
+	 * Получить массив с данными раздела по его айди.
+	 * @param int $id
 	 * @return array|false
 	 */
 	function getSection($id)
@@ -25,7 +33,9 @@ class SectionMapper
 	}
 	
 	/**
-	 *@return array|false
+	 * Получить массив с данными о детях типа "Секция" конкретной секции.
+	 * @param int $sectionID
+	 * @return array|false
 	 */
 	function getSectionChildList($sectionID)
 	{
@@ -39,6 +49,12 @@ class SectionMapper
 		return $data;
 	}
 	
+	/**
+	 * Добавить в базу данных секцию (параметр айди объекта роли не играет).
+	 * @param Section $section
+	 * @return bool
+	 * @throws \Exception
+	 */
 	function addSection(Section $section)
 	{
 		try {
@@ -51,6 +67,8 @@ class SectionMapper
 	}
 	
 	/**
+	 * Получить ID результата последней команды INSERT
+	 * (имеет смысл вызывать только следующей же командой после этого INSERT).
 	 * @return int
 	 */
 	function lastInsertedId()
@@ -59,6 +77,7 @@ class SectionMapper
 	}
 	
 	/**
+	 * Изменить данные раздела.
 	 * @param Section $section
 	 * @return bool
 	 * @throws \Exception
@@ -75,7 +94,9 @@ class SectionMapper
 	}
 	
 	/**
-	 * @param $id
+	 * Удалить раздел по его айди
+	 * (внимание, дочерние ноды, если они есть, не трогаются!).
+	 * @param int $id
 	 * @return bool
 	 * @throws \Exception
 	 */
@@ -92,19 +113,24 @@ class SectionMapper
 	}
 	
 	/**
-	 * @param $sectionID
+	 * Удалить каждого ребёнка раздела
+	 * (внимание, сам раздел не удаляется!).
+	 * @param int $sectionID
 	 * @param ArticleMapper $articleMapper
 	 * @return bool
 	 */
 	function deleteEveryChild($sectionID, ArticleMapper $articleMapper)
 	{
+		//функция, которая рекурсивно удаляет всех детей ноды и её саму
 		$deleteChildRecursive = function($child) use (&$deleteChildRecursive, $articleMapper) {
+			//получаем список и удаляем детей типа "Статьи"
 			$articles = $articleMapper->getArticleChildList($child['id']);
 			if ($articles !== false) {
 				foreach ($articles as $article) {
 					$articlesSuccess = $articleMapper->deleteArticle($article['id']);
 				}
 			}
+			//получаем список и удаляем детей типа "Разделы", а также всех их детей
 			$sections = $this->getSectionChildList($child['id']);
 			if ($sections !== false) {
 				foreach ($sections as $section) {
@@ -112,6 +138,8 @@ class SectionMapper
 				}
 			}
 			$result = $this->deleteSection($child['id']);
+			//возвращаем true, только если все предыдущие sql-команды вернули нам true,
+			//в противном случае возвращаем false
 			if (isset($articlesSuccess))  {
 				if (isset($sectionsSuccess)) {
 					$result = (($articlesSuccess  === true) AND ($sectionsSuccess  === true)) ? $result : false;
@@ -124,8 +152,10 @@ class SectionMapper
 		};
 		$result = true; //значение по умолчанию (в отстутствие предмета для удаления)
 		try {
+			//получаем список детей секции
 			$sectionsChildren = $this->getSectionChildList($sectionID);
 			if ($sectionsChildren !== false) {
+				//удаляем каждого из них и всех его детей
 				foreach ($sectionsChildren as $child) {
 					$result = $deleteChildRecursive($child);
 				}
@@ -137,7 +167,7 @@ class SectionMapper
 	}
 	
 	/**
-	 * @param $row
+	 * @param array $row
 	 * @return Section
 	 */
 	public function toSection($row)
@@ -147,14 +177,17 @@ class SectionMapper
 	}
 	
 	/**
+	 * Этот метод преобразует объект в нужную sql.
+	 *
 	 * @param Section $object
-	 * @param string $typeOfStatement
+	 * @param string $typeOfStatement 'insert' или 'update'
 	 * @return \PDOStatement
 	 * @throws \Exception
 	 */
 	private function toStatement(Section $object, $typeOfStatement = 'insert')
 	{
 		try {
+			//в зависимости от переданного типа sql
 			$typeOfStatement = strtolower($typeOfStatement);
 			switch ( $typeOfStatement ) {
 				case 'insert':
@@ -170,7 +203,10 @@ class SectionMapper
 				default:
 					throw new \Exception('Incorrect type of statement');
 			}
+			//создаём нужный pdo-statment
 			$stmt = $this->pdo->prepare($sql);
+			//привязываем переменные к placeholder'ам
+			//остаётся только исполнить
 			if ($typeOfStatement === 'update') {
 				$stmt->bindParam(':id', $object->ID, \PDO::PARAM_INT);
 			}

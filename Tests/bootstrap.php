@@ -1,7 +1,7 @@
 <?php
 require_once(dirname(__FILE__, 2) . '/vendor/autoload.php');
 
-$dbname = 
+$dbname =
 $username =
 $password =
 $dsn = "mysql:host=localhost;dbname={$dbname};charset=utf8";

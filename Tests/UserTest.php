@@ -63,10 +63,19 @@ class UserTest extends TestCase
 	{
 		User::addMapper($this->mapper);
 		$user = User::getInstance(1);
-		$result = $user->get('home\location');
-		$this->assertInternalType('array', $result);
+		$user->set('home\location\lat', 'newvalue');
+		$result = $user->get('home\location\lat');
+		$this->assertEquals('newvalue', $result);
 	}
 	
+	function testSetNewKey()
+	{
+		User::addMapper($this->mapper);
+		$user = User::getInstance(1);
+		$user->set('home\location\newkey', 'newvalue');
+		$result = $user->get('home\location\newkey');
+		$this->assertEquals('newvalue', $result);
+	}
 	function testSetFail()
 	{
 		User::addMapper($this->mapper);

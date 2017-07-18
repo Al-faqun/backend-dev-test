@@ -1,7 +1,10 @@
 <?php
 namespace Articles;
 
-
+/**
+ * Class Article
+ * @package Articles
+ */
 class Article
 {
 	public $ID;
@@ -9,6 +12,13 @@ class Article
 	public $parentID;
 	public $textFilepath;
 	
+	/**
+	 * Article constructor.
+	 * @param int $ID
+	 * @param string $name
+	 * @param int $parentID
+	 * @param string $textFilepath
+	 */
 	function __construct($ID, $name, $parentID, $textFilepath)
 	{
 		$this->ID = $ID;
