@@ -77,7 +77,7 @@ class UserMapper
 	
 	/**
 	 * Заменить переменную storage существующего пользователя.
-	 * 
+	 *
 	 * @param int $id
 	 * @param $storage
 	 * @return bool
